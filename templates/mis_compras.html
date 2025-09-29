@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mis compras en el evento: {{ evento_nombre }}</h2>
+
+<h3>Agregar nueva compra</h3>
+<form method="POST" action="{{ url_for('agregar_compra') }}">
+  <input type="hidden" name="evento_id" value="{{ evento_id }}">
+  <div class="mb-3">
+    <input type="text" name="descripcion" class="form-control" placeholder="Concepto (ej. Zapatos)" required>
+  </div>
+  
+  <div class="mb-3">
+    <input type="number" step="0.01" name="monto" class="form-control" placeholder="Monto (€)" required>
+  </div>
+  <button type="submit" class="btn btn-success">Añadir compra</button>
+</form>
+
+<h3 class="mt-4">Tus compras registradas</h3>
+{% if compras_usuario %}
+  <ul class="list-group">
+    {% for compra in compras_usuario %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ compra.descripcion }} ({{ compra.destinatario }}) - €{{ "%.2f"|format(compra.monto) }}</span>
+        <form method="POST" action="{{ url_for('eliminar_compra', compra_id=compra.id, evento_id=evento_id) }}" style="display:inline;">
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No has registrado compras aún.</p>
+{% endif %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">← Volver a eventos</a>
+{% endblock %}

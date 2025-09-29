@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Eventos</h2>
+
+{% if current_user.username == 'admin' %}
+  <div class="mb-4 p-3 bg-light rounded">
+    <h4>Panel de administración</h4>
+  <a href="{{ url_for('admin_create_user') }}" class="btn btn-outline-success btn-sm me-2">➕ Registrar usuario</a>
+    <a href="{{ url_for('crear_evento') }}" class="btn btn-outline-primary btn-sm">📅 Crear evento</a>
+  </div>
+{% endif %}
+
+{% if eventos %}
+  <ul class="list-group">
+    {% for evento in eventos %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <a href="{{ url_for('mis_compras', evento_id=evento.id) }}">{{ evento.nombre }}</a>
+        <div>
+          <a href="{{ url_for('mis_compras', evento_id=evento.id) }}" class="btn btn-outline-success btn-sm me-2">🛒 Mis compras</a>
+          <a href="{{ url_for('cuentas', evento_id=evento.id) }}" class="btn btn-outline-info btn-sm">📊 Cuentas</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No hay eventos aún.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Crear usuario</h2>
+<form method="POST">
+  <div class="mb-3">
+    <input type="text" name="username" class="form-control" placeholder="Usuario" required>
+  </div>
+  <div class="mb-3">
+    <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
+  </div>
+  <button type="submit" class="btn btn-success">Crear usuario</button>
+</form>
+{% if error %}
+  <div class="alert alert-danger mt-3">{{ error }}</div>
+{% endif %}
+{% if success %}
+  <div class="alert alert-success mt-3">{{ success }}</div>
+{% endif %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-3">Volver al dashboard</a>
+
+<hr class="my-4">
+<h3>Usuarios existentes</h3>
+{% if usuarios %}
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th style="width: 140px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td>
+              {% if u.username != 'admin' %}
+                <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}">
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
+                </form>
+              {% else %}
+                <span class="text-muted">No editable</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">No hay usuarios registrados.</p>
+{% endif %}
+{% endblock %}

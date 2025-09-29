@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Crear nuevo evento</h2>
+<form method="POST">
+  <div class="mb-3">
+    <input type="text" name="nombre" class="form-control" placeholder="Nombre del evento (ej. Cumpleaños de Juan 2026)" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Crear evento</button>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+</form>
+{% endblock %}

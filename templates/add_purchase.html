@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ evento_nombre }}</h2>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h5>Tus gastos</h5>
+        <p class="display-6">€{{ "%.2f"|format(total_usuario) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h5>Total del evento</h5>
+        <p class="display-6">€{{ "%.2f"|format(total_general) }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Gastos por persona</h3>
+<ul class="list-group mb-4">
+  {% for usuario, total in gastos_por_usuario.items() %}
+    <li class="list-group-item d-flex justify-content-between">
+      <span>{{ usuario }}</span>
+      <span>€{{ "%.2f"|format(total) }}</span>
+    </li>
+  {% endfor %}
+</ul>
+
+<h3>Nueva compra</h3>
+<form method="POST" action="{{ url_for('agregar_compra') }}">
+  <input type="hidden" name="evento_id" value="{{ evento_id }}">
+  <div class="mb-3">
+    <input type="text" name="descripcion" class="form-control" placeholder="Descripción (ej. Zapatos)" required>
+  </div>
+  <div class="mb-3">
+    <input type="number" step="0.01" name="monto" class="form-control" placeholder="Monto (€)" required>
+  </div>
+  <button type="submit" class="btn btn-success">Registrar compra</button>
+</form>
+
+<h3 class="mt-4">Mis compras en este evento</h3>
+{% if compras_usuario %}
+  <ul class="list-group">
+    {% for c in compras_usuario %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ c.descripcion }} (€{{ "%.2f"|format(c.monto) }})</span>
+        <form method="POST" action="{{ url_for('eliminar_compra', compra_id=c.id, evento_id=evento_id) }}" class="ms-2">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No hay compras aún.</p>
+{% endif %}
+{% endblock %}
