@@ -27,7 +27,8 @@ def init_db():
     cur.execute('''
         CREATE TABLE IF NOT EXISTS eventos (
             id SERIAL PRIMARY KEY,
-            nombre VARCHAR(100) NOT NULL UNIQUE
+            nombre VARCHAR(100) NOT NULL UNIQUE,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE
         );
     ''')
 
@@ -41,8 +42,6 @@ def init_db():
             monto DECIMAL(10, 2) NOT NULL
         );
     ''')
-
-    cur.execute("INSERT INTO eventos (nombre) VALUES ('Navidades 2026') ON CONFLICT DO NOTHING;")
 
     conn.commit()
     cur.close()

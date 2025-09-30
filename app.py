@@ -1,3 +1,7 @@
+
+
+
+
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
@@ -178,7 +182,8 @@ def logout():
 def dashboard():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute('SELECT id, nombre FROM eventos ORDER BY nombre')
+    # Mostrar solo eventos NO asociados al usuario logueado
+    cur.execute('SELECT id, nombre FROM eventos WHERE usuario_id != %s ORDER BY nombre', (current_user.id,))
     eventos = cur.fetchall()
     cur.close()
     conn.close()
@@ -195,15 +200,30 @@ def crear_evento():
         flash('Acceso denegado. Solo el administrador puede crear eventos.')
         return redirect(url_for('dashboard'))
     
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute('SELECT id, username FROM usuarios ORDER BY username')
+    usuarios = cur.fetchall()
+    cur.execute('SELECT id, nombre FROM eventos ORDER BY nombre')
+    eventos = cur.fetchall()
+    cur.close()
     if request.method == 'POST':
-        nombre = request.form['nombre'].strip()
-        if not nombre:
-            flash('El nombre del evento no puede estar vacío.')
+        if 'eliminar_evento' in request.form:
+            evento_id = request.form['eliminar_evento']
+            cur = conn.cursor()
+            cur.execute('DELETE FROM eventos WHERE id = %s', (evento_id,))
+            conn.commit()
+            cur.close()
+            flash('Evento eliminado correctamente.')
+            return redirect(url_for('crear_evento'))
+        nombre = request.form.get('nombre', '').strip()
+        usuario_id = request.form.get('usuario_id')
+        if not nombre or not usuario_id:
+            flash('El nombre del evento y el usuario son obligatorios.')
         else:
-            conn = get_db_connection()
             cur = conn.cursor()
             try:
-                cur.execute('INSERT INTO eventos (nombre) VALUES (%s)', (nombre,))
+                cur.execute('INSERT INTO eventos (nombre, usuario_id) VALUES (%s, %s)', (nombre, usuario_id))
                 conn.commit()
                 flash(f'Evento "{nombre}" creado exitosamente.')
                 return redirect(url_for('dashboard'))
@@ -213,7 +233,25 @@ def crear_evento():
             finally:
                 cur.close()
                 conn.close()
-    return render_template('crear_evento.html')
+            return render_template('crear_evento.html', usuarios=usuarios, eventos=eventos)
+    conn.close()
+    return render_template('crear_evento.html', usuarios=usuarios, eventos=eventos)
+
+# Ruta para eliminar evento (POST)
+@app.route('/eliminar-evento/<int:evento_id>', methods=['POST'])
+@login_required
+def eliminar_evento(evento_id):
+    if not is_admin():
+        flash('Acceso denegado.')
+        return redirect(url_for('dashboard'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM eventos WHERE id = %s', (evento_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash('Evento eliminado correctamente.')
+    return redirect(url_for('crear_evento'))
 
 @app.route('/evento/<int:evento_id>')
 @login_required
@@ -285,6 +323,58 @@ def agregar_compra():
     conn.close()
     return redirect(url_for('mis_compras', evento_id=evento_id))
 
+
+# --- Ruta /cuenta-total movida junto al resto de rutas ---
+
+@app.route('/cuenta-total')
+@login_required
+def cuenta_total():
+    if not is_admin():
+        flash('Acceso denegado. Solo el administrador puede ver la cuenta total.')
+        return redirect(url_for('dashboard'))
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    # Obtener aportaciones de compras (solo de usuarios que NO son 'admin') para TODOS los eventos
+    cur.execute('''
+        SELECT c.comprador_id, u.username, SUM(c.monto) AS total_aportado
+        FROM compras c
+        JOIN usuarios u ON c.comprador_id = u.id
+        WHERE u.username != 'admin'
+        GROUP BY c.comprador_id, u.username
+    ''')
+    aportaciones = {row['username']: float(row['total_aportado']) for row in cur.fetchall()}
+    # Obtener TODOS los usuarios registrados EXCEPTO 'admin'
+    cur.execute("SELECT username FROM usuarios WHERE username != 'admin' ORDER BY username")
+    usuarios_normales = [row['username'] for row in cur.fetchall()]
+    # Si no hay usuarios normales, mostrar advertencia
+    if not usuarios_normales:
+        flash('No hay usuarios participantes (sin contar al admin).')
+        return redirect(url_for('dashboard'))
+    # Calcular total general (solo de usuarios normales)
+    total_general = sum(aportaciones.get(u, 0) for u in usuarios_normales)
+    num_usuarios = len(usuarios_normales)
+    cuota_justa = total_general / num_usuarios if num_usuarios > 0 else 0
+    # Calcular saldo por usuario (solo usuarios normales)
+    saldos = {}
+    for usuario in usuarios_normales:
+        aportado = aportaciones.get(usuario, 0)
+        saldo = aportado - cuota_justa
+        saldos[usuario] = {
+            'aportado': aportado,
+            'cuota_justa': cuota_justa,
+            'saldo': saldo
+        }
+    cur.close()
+    conn.close()
+    return render_template(
+        'cuenta_total.html',
+        total_general=total_general,
+        num_usuarios=num_usuarios,
+        cuota_justa=cuota_justa,
+        saldos=saldos
+    )
+
+
 @app.route('/cuentas/<int:evento_id>')
 @login_required
 def cuentas(evento_id):
@@ -298,30 +388,43 @@ def cuentas(evento_id):
         flash('Evento no encontrado')
         return redirect(url_for('dashboard'))
     
-    # Obtener aportaciones de compras (solo de usuarios que NO son 'admin')
+    # Obtener el usuario asociado al evento
+    cur.execute('SELECT usuario_id FROM eventos WHERE id = %s', (evento_id,))
+    evento_row = cur.fetchone()
+    usuario_evento_id = evento_row['usuario_id'] if evento_row else None
+
+    # Obtener nombre de usuario asociado al evento
+    usuario_evento_username = None
+    if usuario_evento_id:
+        cur.execute('SELECT username FROM usuarios WHERE id = %s', (usuario_evento_id,))
+        user_row = cur.fetchone()
+        if user_row:
+            usuario_evento_username = user_row['username']
+
+    # Obtener aportaciones de compras (solo de usuarios que NO son 'admin' NI el usuario asociado al evento)
     cur.execute('''
         SELECT c.comprador_id, u.username, SUM(c.monto) AS total_aportado
         FROM compras c
         JOIN usuarios u ON c.comprador_id = u.id
-        WHERE c.evento_id = %s AND u.username != 'admin'
+        WHERE c.evento_id = %s AND u.username != 'admin' AND u.username != %s
         GROUP BY c.comprador_id, u.username
-    ''', (evento_id,))
+    ''', (evento_id, usuario_evento_username))
     aportaciones = {row['username']: float(row['total_aportado']) for row in cur.fetchall()}
-    
-    # Obtener TODOS los usuarios registrados EXCEPTO 'admin'
-    cur.execute("SELECT username FROM usuarios WHERE username != 'admin' ORDER BY username")
+
+    # Obtener TODOS los usuarios registrados EXCEPTO 'admin' y el usuario asociado al evento
+    cur.execute("SELECT username FROM usuarios WHERE username != 'admin' AND username != %s ORDER BY username", (usuario_evento_username,))
     usuarios_normales = [row['username'] for row in cur.fetchall()]
-    
+
     # Si no hay usuarios normales, mostrar advertencia
     if not usuarios_normales:
-        flash('No hay usuarios participantes (sin contar al admin).')
+        flash('No hay usuarios participantes (sin contar al admin ni el usuario asociado al evento).')
         return redirect(url_for('ver_evento', evento_id=evento_id))
-    
+
     # Calcular total general (solo de usuarios normales)
     total_general = sum(aportaciones.get(u, 0) for u in usuarios_normales)
     num_usuarios = len(usuarios_normales)
     cuota_justa = total_general / num_usuarios if num_usuarios > 0 else 0
-    
+
     # Calcular saldo por usuario (solo usuarios normales)
     saldos = {}
     for usuario in usuarios_normales:

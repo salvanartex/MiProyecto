@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Cuenta Total (Todos los eventos)</h2>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5>Total gastado</h5>
+        <p class="display-6">€{{ "%.2f"|format(total_general) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5>Nº de usuarios</h5>
+        <p class="display-6">{{ num_usuarios }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5>Cuota justa</h5>
+        <p class="display-6">€{{ "%.2f"|format(cuota_justa) }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Resumen por usuario</h3>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Usuario</th>
+      <th>Aportado</th>
+      <th>Cuota justa</th>
+      <th>Saldo</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for usuario, datos in saldos.items() %}
+    <tr>
+      <td><strong>{{ usuario }}</strong></td>
+      <td>€{{ "%.2f"|format(datos.aportado) }}</td>
+      <td>€{{ "%.2f"|format(datos.cuota_justa) }}</td>
+      <td class="{% if datos.saldo > 0 %}text-success{% elif datos.saldo < 0 %}text-danger{% endif %}">
+        {% if datos.saldo >= 0 %}+{% endif %}€{{ "%.2f"|format(datos.saldo) }}
+      </td>
+      <td>
+        {% if datos.saldo > 0 %}
+          <span class="badge bg-success">Le deben €{{ "%.2f"|format(datos.saldo) }}</span>
+        {% elif datos.saldo < 0 %}
+          <span class="badge bg-danger">Debe €{{ "%.2f"|format(-datos.saldo) }}</span>
+        {% else %}
+          <span class="badge bg-secondary">Cuadrado</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="alert alert-info">
+  <strong>¿Cómo interpretar el saldo?</strong><br>
+  • <span class="text-success">Positivo</span>: le deben dinero.<br>
+  • <span class="text-danger">Negativo</span>: debe dinero.<br>
+  • El total de saldos siempre suma 0.
+</div>
+  </tbody>
+</table>
+{% endblock %}

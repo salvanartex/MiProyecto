@@ -5,8 +5,9 @@
 {% if current_user.username == 'admin' %}
   <div class="mb-4 p-3 bg-light rounded">
     <h4>Panel de administración</h4>
-  <a href="{{ url_for('admin_create_user') }}" class="btn btn-outline-success btn-sm me-2">➕ Registrar usuario</a>
-    <a href="{{ url_for('crear_evento') }}" class="btn btn-outline-primary btn-sm">📅 Crear evento</a>
+    <a href="{{ url_for('admin_create_user') }}" class="btn btn-outline-success btn-sm me-2">➕ Registrar usuario</a>
+    <a href="{{ url_for('crear_evento') }}" class="btn btn-outline-primary btn-sm me-2">📅 Crear evento</a>
+    <a href="{{ url_for('cuenta_total') }}" class="btn btn-outline-dark btn-sm">💰 Cuenta Total</a>
   </div>
 {% endif %}
 
