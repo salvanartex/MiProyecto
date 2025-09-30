@@ -6,7 +6,9 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 def get_db_connection():
     url = os.environ.get('DATABASE_URL')
     if url:
-        # Heroku/producción suele requerir SSL
+        # Render puede dar postgres:// pero psycopg2 requiere postgresql://
+        if url.startswith('postgres://'):
+            url = url.replace('postgres://', 'postgresql://', 1)
         return psycopg2.connect(url, sslmode='require')
     # Fallback local para desarrollo
     local_url = "postgresql://postgres:postgre@localhost:5432/gift_tracker_dev"
