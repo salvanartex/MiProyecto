@@ -1,24 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Eventos</h2>
+<h2 class="mb-3">Eventos</h2>
 
 {% if current_user.username == 'admin' %}
   <div class="mb-4 p-3 bg-light rounded">
     <h4>Panel de administración</h4>
-    <a href="{{ url_for('admin_create_user') }}" class="btn btn-outline-success btn-sm me-2">➕ Registrar usuario</a>
-    <a href="{{ url_for('crear_evento') }}" class="btn btn-outline-primary btn-sm me-2">📅 Crear evento</a>
-    <a href="{{ url_for('cuenta_total') }}" class="btn btn-outline-dark btn-sm">💰 Cuenta Total</a>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('admin_create_user') }}" class="btn btn-outline-success flex-fill">➕ Registrar usuario</a>
+      <a href="{{ url_for('crear_evento') }}" class="btn btn-outline-primary flex-fill">📅 Crear evento</a>
+      <a href="{{ url_for('cuenta_total') }}" class="btn btn-outline-dark flex-fill">💰 Cuenta Total</a>
+    </div>
   </div>
 {% endif %}
 
 {% if eventos %}
   <ul class="list-group">
     {% for evento in eventos %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <a href="{{ url_for('mis_compras', evento_id=evento.id) }}">{{ evento.nombre }}</a>
-        <div>
-          <a href="{{ url_for('mis_compras', evento_id=evento.id) }}" class="btn btn-outline-success btn-sm me-2">🛒 Mis compras</a>
-          <a href="{{ url_for('cuentas', evento_id=evento.id) }}" class="btn btn-outline-info btn-sm">📊 Cuentas</a>
+      <li class="list-group-item">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+          <a href="{{ url_for('mis_compras', evento_id=evento.id) }}" class="fw-bold">{{ evento.nombre }}</a>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('mis_compras', evento_id=evento.id) }}" class="btn btn-outline-success">🛒 Mis compras</a>
+            <a href="{{ url_for('cuentas', evento_id=evento.id) }}" class="btn btn-outline-info">📊 Cuentas</a>
+          </div>
         </div>
       </li>
     {% endfor %}
